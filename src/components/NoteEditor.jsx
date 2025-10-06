@@ -1,5 +1,3 @@
-// DONE
-
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useUser } from "@clerk/clerk-react";
@@ -18,11 +16,26 @@ import {
   Tag,
   Edit3,
   Shield,
+  Bold,
+  Italic,
+  Underline as UnderlineIcon,
+  Strikethrough,
+  Code,
+  Heading1,
+  Heading2,
+  Heading3,
+  List,
+  ListOrdered,
+  Quote,
+  Undo,
+  Redo,
+  Link as LinkIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import TipTapEditor from "./TipTapEditor";
 import { api } from "../../convex/_generated/api";
@@ -36,8 +49,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "./ui/dialog";
-import { useCallback } from "react"; // Add missing import
+import { useCallback } from "react";
 import { formatDistanceToNow } from "date-fns";
+import { cn } from "@/lib/utils";
 
 export default function NoteEditor() {
   const { noteId } = useParams();
@@ -49,6 +63,7 @@ export default function NoteEditor() {
   const [isModified, setIsModified] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
+  const [activeTool, setActiveTool] = useState(null);
   const editorRef = useRef(null);
 
   const isNewNote = !noteId;
@@ -260,6 +275,38 @@ export default function NoteEditor() {
     setIsModified(true);
   };
 
+  const ToolbarButton = ({ onClick, isActive, children, title, toolName }) => (
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={() => {
+        onClick();
+        setActiveTool(toolName);
+        setTimeout(() => setActiveTool(null), 300);
+      }}
+      title={title}
+      type="button"
+      className={cn(
+        "h-8 w-8 p-0 rounded-lg transition-all duration-300 relative overflow-hidden group",
+        isActive
+          ? "bg-gradient-to-br from-blue-500 to-purple-500 text-white shadow-lg scale-105"
+          : "bg-white/80 text-gray-600 hover:bg-gray-100/80 hover:text-gray-900 hover:shadow-md border border-gray-200/50"
+      )}
+    >
+      {activeTool === toolName && (
+        <div className="absolute inset-0 bg-white/20 animate-pulse rounded-lg" />
+      )}
+      <div
+        className={cn(
+          "transition-transform duration-300",
+          isActive && "scale-110"
+        )}
+      >
+        {children}
+      </div>
+    </Button>
+  );
+
   return (
     <div className="h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50/20 to-teal-50/20 relative overflow-hidden">
       {/* Animated background */}
@@ -313,142 +360,389 @@ export default function NoteEditor() {
         </div>
       </div>
 
-      {/* Desktop header */}
-      <div className="hidden md:block p-6 border-b border-gray-200/50 bg-white/80 backdrop-blur-sm relative z-10">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-wrap gap-4 items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleCancel}
-                className="gap-2 text-gray-700 hover:bg-gray-100/80 rounded-xl transition-all duration-300 group"
-              >
-                <ArrowLeft className="size-4 group-hover:-translate-x-1 transition-transform duration-300" />
-                Go Back
-              </Button>
+      {/* Desktop header with sticky toolbar */}
+      <div className="hidden md:block border-b border-gray-200/50 bg-white/80 backdrop-blur-sm relative z-10 sticky top-0">
+        {/* Main Header */}
+        <div className="p-6 border-b border-gray-200/50">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex flex-wrap gap-4 items-center justify-between">
+              <div className="flex items-center gap-4">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleCancel}
+                  className="gap-2 text-gray-700 hover:bg-gray-100/80 rounded-xl transition-all duration-300 group"
+                >
+                  <ArrowLeft className="size-4 group-hover:-translate-x-1 transition-transform duration-300" />
+                  Go Back
+                </Button>
 
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-gradient-to-br from-blue-500 to-purple-500 rounded-xl shadow-lg">
-                  <Edit3 className="size-5 text-white" />
-                </div>
-                <div>
-                  <h1 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
-                    {isNewNote
-                      ? "Create New Note"
-                      : `${currentNote?.title || "Edit Note"}`}
-                  </h1>
-                  <div className="flex items-center gap-3 mt-1">
-                    {isModified && (
-                      <Badge
-                        variant="outline"
-                        className="bg-amber-50 text-amber-700 border-amber-200 text-xs"
-                      >
-                        <Clock className="size-3 mr-1" />
-                        Modified
-                      </Badge>
-                    )}
-                    {lastSaved && (
-                      <span className="text-xs text-gray-500 flex items-center gap-1">
-                        <Zap className="size-3 text-green-500" />
-                        Saved{" "}
-                        {formatDistanceToNow(lastSaved, { addSuffix: true })}
-                      </span>
-                    )}
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-gradient-to-br from-blue-500 to-purple-500 rounded-xl shadow-lg">
+                    <Edit3 className="size-5 text-white" />
+                  </div>
+                  <div>
+                    <h1 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+                      {isNewNote
+                        ? "Create New Note"
+                        : `${currentNote?.title || "Edit Note"}`}
+                    </h1>
+                    <div className="flex items-center gap-3 mt-1">
+                      {isModified && (
+                        <Badge
+                          variant="outline"
+                          className="bg-amber-50 text-amber-700 border-amber-200 text-xs"
+                        >
+                          <Clock className="size-3 mr-1" />
+                          Modified
+                        </Badge>
+                      )}
+                      {lastSaved && (
+                        <span className="text-xs text-gray-500 flex items-center gap-1">
+                          <Zap className="size-3 text-green-500" />
+                          Saved{" "}
+                          {formatDistanceToNow(lastSaved, { addSuffix: true })}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            <div className="flex items-center gap-3">
-              {!isNewNote && (
-                <>
-                  <Button
-                    variant="outline"
-                    onClick={handleArchive}
-                    size="sm"
-                    className="gap-2 border-amber-200 text-amber-700 hover:bg-amber-50/80 rounded-xl transition-all duration-300 group"
-                  >
-                    <Archive className="size-4 group-hover:scale-110 transition-transform duration-300" />
-                    {currentNote?.isArchived ? "Unarchive" : "Archive"}
-                  </Button>
+              <div className="flex items-center gap-3">
+                {!isNewNote && (
+                  <>
+                    <Button
+                      variant="outline"
+                      onClick={handleArchive}
+                      size="sm"
+                      className="gap-2 border-amber-200 text-amber-700 hover:bg-amber-50/80 rounded-xl transition-all duration-300 group"
+                    >
+                      <Archive className="size-4 group-hover:scale-110 transition-transform duration-300" />
+                      {currentNote?.isArchived ? "Unarchive" : "Archive"}
+                    </Button>
 
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-2 border-red-200 text-red-600 hover:bg-red-50/80 rounded-xl transition-all duration-300 group"
-                      >
-                        <Trash2 className="size-4 group-hover:scale-110 transition-transform duration-300" />
-                        Delete
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="bg-white/90 backdrop-blur-md border border-gray-200/50 rounded-2xl shadow-2xl">
-                      <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2 text-red-600">
-                          <Trash2 className="size-5" />
-                          Delete Note
-                        </DialogTitle>
-                        <DialogDescription className="text-gray-600">
-                          This action cannot be undone. The note will be
-                          permanently deleted from your account.
-                        </DialogDescription>
-                      </DialogHeader>
-                      <DialogFooter className="flex items-center gap-3">
-                        <DialogClose asChild>
-                          <Button
-                            variant="outline"
-                            className="rounded-xl border-gray-300"
-                          >
-                            Cancel
-                          </Button>
-                        </DialogClose>
+                    <Dialog>
+                      <DialogTrigger asChild>
                         <Button
-                          variant="destructive"
-                          onClick={handleDelete}
-                          className="gap-2 rounded-xl bg-gradient-to-r from-red-500 to-rose-500 border-0 shadow-lg"
+                          variant="outline"
+                          size="sm"
+                          className="gap-2 border-red-200 text-red-600 hover:bg-red-50/80 rounded-xl transition-all duration-300 group"
                         >
-                          <Trash2 className="size-4" />
-                          Delete Note
+                          <Trash2 className="size-4 group-hover:scale-110 transition-transform duration-300" />
+                          Delete
                         </Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
-                </>
-              )}
-
-              <Button
-                variant="outline"
-                onClick={handleCancel}
-                size="sm"
-                className="gap-2 border-gray-300 text-gray-700 hover:bg-gray-100/80 rounded-xl transition-all duration-300"
-              >
-                <RotateCcw className="size-4" />
-                Cancel
-              </Button>
-
-              <Button
-                onClick={() => handleSave()}
-                disabled={isSaving || !title.trim()}
-                size="sm"
-                className="gap-2 bg-gradient-to-r from-blue-500 to-teal-500 hover:from-blue-600 hover:to-teal-600 text-white shadow-lg hover:shadow-xl rounded-xl transition-all duration-300 transform hover:scale-105"
-              >
-                {isSaving ? (
-                  <div className="flex items-center gap-2">
-                    <div className="size-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Saving...
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <Save className="size-4" />
-                    Save Note
-                    <kbd className="ml-2 text-xs bg-white/20 px-1.5 py-0.5 rounded">
-                      Ctrl+S
-                    </kbd>
-                  </div>
+                      </DialogTrigger>
+                      <DialogContent className="bg-white/90 backdrop-blur-md border border-gray-200/50 rounded-2xl shadow-2xl">
+                        <DialogHeader>
+                          <DialogTitle className="flex items-center gap-2 text-red-600">
+                            <Trash2 className="size-5" />
+                            Delete Note
+                          </DialogTitle>
+                          <DialogDescription className="text-gray-600">
+                            This action cannot be undone. The note will be
+                            permanently deleted from your account.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter className="flex items-center gap-3">
+                          <DialogClose asChild>
+                            <Button
+                              variant="outline"
+                              className="rounded-xl border-gray-300"
+                            >
+                              Cancel
+                            </Button>
+                          </DialogClose>
+                          <Button
+                            variant="destructive"
+                            onClick={handleDelete}
+                            className="gap-2 rounded-xl bg-gradient-to-r from-red-500 to-rose-500 border-0 shadow-lg"
+                          >
+                            <Trash2 className="size-4" />
+                            Delete Note
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  </>
                 )}
-              </Button>
+
+                <Button
+                  variant="outline"
+                  onClick={handleCancel}
+                  size="sm"
+                  className="gap-2 border-gray-300 text-gray-700 hover:bg-gray-100/80 rounded-xl transition-all duration-300"
+                >
+                  <RotateCcw className="size-4" />
+                  Cancel
+                </Button>
+
+                <Button
+                  onClick={() => handleSave()}
+                  disabled={isSaving || !title.trim()}
+                  size="sm"
+                  className="gap-2 bg-gradient-to-r from-blue-500 to-teal-500 hover:from-blue-600 hover:to-teal-600 text-white shadow-lg hover:shadow-xl rounded-xl transition-all duration-300 transform hover:scale-105"
+                >
+                  {isSaving ? (
+                    <div className="flex items-center gap-2">
+                      <div className="size-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Saving...
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <Save className="size-4" />
+                      Save Note
+                      <kbd className="ml-2 text-xs bg-white/20 px-1.5 py-0.5 rounded">
+                        Ctrl+S
+                      </kbd>
+                    </div>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Sticky Editor Toolbar */}
+        <div className="p-3 bg-gradient-to-r from-gray-50 to-gray-100/50 border-b border-gray-200/50">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex items-center gap-1 flex-wrap">
+              {/* Text Formatting */}
+              <div className="flex items-center gap-1 mr-2">
+                <ToolbarButton
+                  onClick={() =>
+                    editorRef.current
+                      ?.getEditor()
+                      ?.chain()
+                      .focus()
+                      .toggleBold()
+                      .run()
+                  }
+                  isActive={editorRef.current?.getEditor()?.isActive("bold")}
+                  title="Bold (Ctrl+B)"
+                  toolName="bold"
+                >
+                  <Bold className="h-4 w-4" />
+                </ToolbarButton>
+
+                <ToolbarButton
+                  onClick={() =>
+                    editorRef.current
+                      ?.getEditor()
+                      ?.chain()
+                      .focus()
+                      .toggleItalic()
+                      .run()
+                  }
+                  isActive={editorRef.current?.getEditor()?.isActive("italic")}
+                  title="Italic (Ctrl+I)"
+                  toolName="italic"
+                >
+                  <Italic className="h-4 w-4" />
+                </ToolbarButton>
+
+                <ToolbarButton
+                  onClick={() =>
+                    editorRef.current
+                      ?.getEditor()
+                      ?.chain()
+                      .focus()
+                      .toggleUnderline()
+                      .run()
+                  }
+                  isActive={editorRef.current
+                    ?.getEditor()
+                    ?.isActive("underline")}
+                  title="Underline"
+                  toolName="underline"
+                >
+                  <UnderlineIcon className="h-4 w-4" />
+                </ToolbarButton>
+
+                <ToolbarButton
+                  onClick={() =>
+                    editorRef.current
+                      ?.getEditor()
+                      ?.chain()
+                      .focus()
+                      .toggleStrike()
+                      .run()
+                  }
+                  isActive={editorRef.current?.getEditor()?.isActive("strike")}
+                  title="Strikethrough"
+                  toolName="strike"
+                >
+                  <Strikethrough className="h-4 w-4" />
+                </ToolbarButton>
+
+                <ToolbarButton
+                  onClick={() =>
+                    editorRef.current
+                      ?.getEditor()
+                      ?.chain()
+                      .focus()
+                      .toggleCode()
+                      .run()
+                  }
+                  isActive={editorRef.current?.getEditor()?.isActive("code")}
+                  title="Code"
+                  toolName="code"
+                >
+                  <Code className="h-4 w-4" />
+                </ToolbarButton>
+              </div>
+
+              <Separator
+                orientation="vertical"
+                className="h-6 mx-1 bg-gray-300/50"
+              />
+
+              {/* Headings */}
+              <div className="flex items-center gap-1 mr-2">
+                <ToolbarButton
+                  onClick={() =>
+                    editorRef.current
+                      ?.getEditor()
+                      ?.chain()
+                      .focus()
+                      .toggleHeading({ level: 1 })
+                      .run()
+                  }
+                  isActive={editorRef.current
+                    ?.getEditor()
+                    ?.isActive("heading", { level: 1 })}
+                  title="Heading 1"
+                  toolName="h1"
+                >
+                  <Heading1 className="h-4 w-4" />
+                </ToolbarButton>
+
+                <ToolbarButton
+                  onClick={() =>
+                    editorRef.current
+                      ?.getEditor()
+                      ?.chain()
+                      .focus()
+                      .toggleHeading({ level: 2 })
+                      .run()
+                  }
+                  isActive={editorRef.current
+                    ?.getEditor()
+                    ?.isActive("heading", { level: 2 })}
+                  title="Heading 2"
+                  toolName="h2"
+                >
+                  <Heading2 className="h-4 w-4" />
+                </ToolbarButton>
+
+                <ToolbarButton
+                  onClick={() =>
+                    editorRef.current
+                      ?.getEditor()
+                      ?.chain()
+                      .focus()
+                      .toggleHeading({ level: 3 })
+                      .run()
+                  }
+                  isActive={editorRef.current
+                    ?.getEditor()
+                    ?.isActive("heading", { level: 3 })}
+                  title="Heading 3"
+                  toolName="h3"
+                >
+                  <Heading3 className="h-4 w-4" />
+                </ToolbarButton>
+              </div>
+
+              <Separator
+                orientation="vertical"
+                className="h-6 mx-1 bg-gray-300/50"
+              />
+
+              {/* Lists */}
+              <div className="flex items-center gap-1 mr-2">
+                <ToolbarButton
+                  onClick={() =>
+                    editorRef.current
+                      ?.getEditor()
+                      ?.chain()
+                      .focus()
+                      .toggleBulletList()
+                      .run()
+                  }
+                  isActive={editorRef.current
+                    ?.getEditor()
+                    ?.isActive("bulletList")}
+                  title="Bullet List"
+                  toolName="bullet"
+                >
+                  <List className="h-4 w-4" />
+                </ToolbarButton>
+
+                <ToolbarButton
+                  onClick={() =>
+                    editorRef.current
+                      ?.getEditor()
+                      ?.chain()
+                      .focus()
+                      .toggleOrderedList()
+                      .run()
+                  }
+                  isActive={editorRef.current
+                    ?.getEditor()
+                    ?.isActive("orderedList")}
+                  title="Numbered List"
+                  toolName="ordered"
+                >
+                  <ListOrdered className="h-4 w-4" />
+                </ToolbarButton>
+
+                <ToolbarButton
+                  onClick={() =>
+                    editorRef.current
+                      ?.getEditor()
+                      ?.chain()
+                      .focus()
+                      .toggleBlockquote()
+                      .run()
+                  }
+                  isActive={editorRef.current
+                    ?.getEditor()
+                    ?.isActive("blockquote")}
+                  title="Quote"
+                  toolName="quote"
+                >
+                  <Quote className="h-4 w-4" />
+                </ToolbarButton>
+              </div>
+
+              <Separator
+                orientation="vertical"
+                className="h-6 mx-1 bg-gray-300/50"
+              />
+
+              {/* Links & Actions */}
+              <div className="flex items-center gap-1">
+                <ToolbarButton
+                  onClick={() =>
+                    editorRef.current?.getEditor()?.chain().focus().undo().run()
+                  }
+                  title="Undo (Ctrl+Z)"
+                  toolName="undo"
+                >
+                  <Undo className="h-4 w-4" />
+                </ToolbarButton>
+
+                <ToolbarButton
+                  onClick={() =>
+                    editorRef.current?.getEditor()?.chain().focus().redo().run()
+                  }
+                  title="Redo (Ctrl+Y)"
+                  toolName="redo"
+                >
+                  <Redo className="h-4 w-4" />
+                </ToolbarButton>
+              </div>
             </div>
           </div>
         </div>
